@@ -331,52 +331,75 @@ mongodb://user:password@host1:27017,host2:27017/?authSource=admin&maxPoolSize=10
 ```
 El primer ejemplo se conecta a una instancia de MongoDB que se ejecuta localmente en el puerto predeterminado, mientras que el segundo ejemplo ilustra una conexión a un conjunto de réplicas con autenticación y opciones adicionales.
 
-El **formato de cadena de conexión SRV** tiene la siguiente forma: mongodb+srv://\[username:password@\]host\[/\[defaultauthdb\]\[?options\]\].12 La diferencia clave aquí es el prefijo mongodb+srv:// y la especificación de un solo host. Este host no es una dirección directa a un servidor MongoDB, sino el nombre de host de un registro DNS SRV.12 Cuando el driver encuentra una cadena de conexión SRV, consulta este registro DNS para descubrir los nombres de host y los números de puerto reales de las instancias mongod o mongos que componen la implementación de MongoDB.12 Este formato se utiliza comúnmente con servicios de MongoDB gestionados en la nube como MongoDB Atlas, ya que ofrece flexibilidad en la gestión de la infraestructura subyacente sin requerir que los clientes se reconfiguren cuando cambian las direcciones del servidor.12 En particular, al utilizar el formato mongodb+srv://, el cifrado TLS/SSL se habilita automáticamente para la conexión.15 Es importante tener en cuenta que el formato SRV no espera que se especifique un número de puerto directamente después del nombre de host.18
+El **formato de cadena de conexión SRV** tiene la siguiente forma:
 
-La distinción principal entre estos dos formatos radica en cómo el driver descubre los servidores MongoDB. El formato estándar requiere una lista directa de todas las direcciones del servidor, mientras que el formato SRV se basa en la resolución DNS para obtener esta información.12 Esto hace que el formato SRV sea particularmente ventajoso en entornos dinámicos en la nube donde las direcciones del servidor pueden cambiar con mayor frecuencia.
+```mongodb
+mongodb+srv://\[username:password@\]host\[/\[defaultauthdb\]\[?options\]\]
+```
 
-Aquí hay algunos ejemplos de diferentes formatos de URI de conexión en la práctica. Para conectarse a una instancia de MongoDB que se ejecuta localmente en el puerto predeterminado, el URI normalmente sería mongodb://localhost:27017.12 Para un clúster de MongoDB Atlas, se utilizaría una cadena de conexión SRV, similar a mongodb+srv://\<usuario\>:\<contraseña\>@\<url-del-clúster\>/\<basededatos-predeterminada\>?retryWrites=true\&w=majority.12 La conexión a un conjunto de réplicas implicaría enumerar los nombres de host y los puertos de cada miembro, junto con la opción replicaSet, como mongodb://host1:27017,host2:27017,host3:27017/?replicaSet=myRs.13 Cuando se requiere autenticación, el nombre de usuario y la contraseña se incluyen en el URI, como se ve en el ejemplo de Atlas.13
+La diferencia clave aquí es el prefijo mongodb+srv:// y la especificación de un solo host. Este host no es una dirección directa a un servidor MongoDB, sino el nombre de host de un registro DNS SRV. Cuando el driver encuentra una cadena de conexión SRV, consulta este registro DNS para descubrir los nombres de host y los números de puerto reales de las instancias mongod (el proceso principal del servidor de MongoDB) o mongos (el enrutador de consultas en configuraciones distribuidas) que componen la implementación de MongoDB. Este formato se utiliza comúnmente con servicios de MongoDB gestionados en la nube como MongoDB Atlas, ya que ofrece flexibilidad en la gestión de la infraestructura subyacente sin requerir que los clientes se reconfiguren cuando cambian las direcciones del servidor. En particular, al utilizar el formato mongodb+srv://, el cifrado TLS/SSL se habilita automáticamente para la conexión. Es importante tener en cuenta que el formato SRV no espera que se especifique un número de puerto directamente después del nombre de host.
 
-La elección entre los formatos de URI de conexión estándar y SRV está determinada en gran medida por el entorno en el que se aloja la implementación de MongoDB. El formato SRV es el método preferido para los servicios gestionados en la nube como MongoDB Atlas debido a su flexibilidad inherente y a la habilitación automática del cifrado TLS/SSL, que es crucial para las conexiones seguras basadas en la nube. En contraste, el formato estándar se utiliza más comúnmente para las implementaciones de MongoDB autogestionadas, donde los nombres de host y los números de puerto de los servidores se controlan y conocen directamente. Comprender las diversas opciones de conexión disponibles dentro del URI es esencial para que los desarrolladores ajusten el comportamiento y el rendimiento del driver de MongoDB. Estas opciones permiten la personalización de aspectos como el número máximo de conexiones en el pool, el nivel de reconocimiento de escritura requerido, la especificación del nombre del conjunto de réplicas y la base de datos que se utilizará para la autenticación. Los URI de conexión con formato incorrecto son una causa frecuente de errores de conexión en las aplicaciones Node.js que interactúan con MongoDB. Por ejemplo, como se ilustra en 18, intentar incluir un número de puerto en un URI mongodb+srv resultará en un MongoParseError, lo que resalta la importancia de adherirse a la sintaxis correcta para el formato de URI elegido para garantizar el establecimiento exitoso de la conexión.
+Ejemplos de URI de conexión SRV incluyen:
+
+```mongodb
+mongodb+srv://usuario:contraseña@cluster0.mongodb.net/miBaseDeDatos
+
+mongodb+srv://admin:P@ssw0rd@micluster.mongodb.net/admin?retryWrites=true&w=majority
+
+mongodb+srv://readonly:readonly@sample-cluster.mongodb.net/sample_airbnb
+
+mongodb+srv://usuario@miproyecto.mongodb.net/test?authSource=admin
+```
+En estos ejemplos, observa que:
+
+- Siempre comienzan con el prefijo mongodb+srv://
+- No se especifica ningún número de puerto (a diferencia del formato estándar)
+- Solo se proporciona un nombre de host (el registro DNS SRV)
+- El cifrado TLS/SSL se habilita automáticamente
+- Se pueden añadir opciones de conexión después del signo de interrogación (?)
+
+La distinción principal entre estos dos formatos radica en cómo el driver descubre los servidores MongoDB. El formato estándar requiere una lista directa de todas las direcciones del servidor, mientras que el formato SRV se basa en la resolución DNS para obtener esta información. Esto hace que el formato SRV sea particularmente ventajoso en entornos dinámicos en la nube donde las direcciones del servidor pueden cambiar con mayor frecuencia.
+
+La elección entre los formatos de URI de conexión estándar y SRV está determinada en gran medida por el entorno en el que se aloja la implementación de MongoDB. El formato SRV es el método preferido para los servicios gestionados en la nube como MongoDB Atlas debido a su flexibilidad inherente y a la habilitación automática del cifrado TLS/SSL, que es crucial para las conexiones seguras basadas en la nube. En contraste, el formato estándar se utiliza más comúnmente para las implementaciones de MongoDB autogestionadas, donde los nombres de host y los números de puerto de los servidores se controlan y conocen directamente. Comprender las diversas opciones de conexión disponibles dentro del URI es esencial para que los desarrolladores ajusten el comportamiento y el rendimiento del driver de MongoDB. Estas opciones permiten la personalización de aspectos como el número máximo de conexiones en el pool, el nivel de reconocimiento de escritura requerido, la especificación del nombre del conjunto de réplicas y la base de datos que se utilizará para la autenticación. Los URI de conexión con formato incorrecto son una causa frecuente de errores de conexión en las aplicaciones Node.js que interactúan con MongoDB. Por ejemplo, intentar incluir un número de puerto en un URI mongodb+srv resultará en un MongoParseError, lo que resalta la importancia de adherirse a la sintaxis correcta para el formato de URI elegido para garantizar el establecimiento exitoso de la conexión.
 
 **4\. Realización de Operaciones CRUD con el Driver de MongoDB para Node.js**
 
-El driver oficial de MongoDB para Node.js proporciona un conjunto sencillo de métodos para realizar operaciones CRUD (Crear, Leer, Actualizar, Eliminar) fundamentales en las colecciones de MongoDB.22 Estas operaciones son esenciales para interactuar con los datos almacenados en la base de datos.
+El driver oficial de MongoDB para Node.js proporciona un conjunto sencillo de métodos para realizar operaciones CRUD (Crear, Leer, Actualizar, Eliminar) fundamentales en las colecciones de MongoDB. Estas operaciones son esenciales para interactuar con los datos almacenados en la base de datos.
 
-**Operaciones de Creación:** Para insertar nuevos documentos en una colección, el driver ofrece dos métodos principales. El método insertOne se utiliza para insertar un solo documento. Su sintaxis generalmente implica llamar a collection.insertOne(document, options, callback).19 El parámetro document es el objeto JavaScript que representa los datos que se van a insertar. Por ejemplo:
+**4.1 Operaciones de Creación:** Para insertar nuevos documentos en una colección, el driver ofrece dos métodos principales. El método **insertOne** se utiliza para insertar un solo documento. Su sintaxis generalmente implica llamar a `collection.insertOne(document, options, callback)`. El parámetro document es el objeto JavaScript que representa los datos que se van a insertar. Por ejemplo:
 
-JavaScript
-
-const result \= await db.collection('micoleccion').insertOne({ name: 'John Doe', age: 30 });  
-console.log(\`Nuevo documento creado con el siguiente id: ${result.insertedId}\`);
+```javascript
+const result = await db.collection('micoleccion').insertOne({ name: 'John Doe', age: 30 });  
+console.log(`Nuevo documento creado con el siguiente id: ${result.insertedId}`);
+```
 
 Este fragmento de código muestra cómo insertar un documento en una colección llamada micoleccion.
 
-* db.collection('micoleccion'): Selecciona la colección 'micoleccion' dentro de la base de datos db.  
-* .insertOne({ name: 'John Doe', age: 30 }): Llama al método insertOne para insertar un nuevo documento. El documento es un objeto JavaScript con dos campos: name con el valor 'John Doe' y age con el valor 30\.  
-* await: Indica que esta es una operación asíncrona y el código esperará a que se complete antes de continuar. Esto requiere que la función contenedora sea async.  
-* const result \=...: Almacena el resultado de la operación de inserción en la variable result. Este resultado contendrá información sobre la operación, como el ID del documento insertado.  
-* console.log(...): Imprime en la consola un mensaje indicando que se ha creado un nuevo documento y muestra su ID único (\_id), que se encuentra en result.insertedId.
+* **db.collection('micoleccion'):** Selecciona la colección 'micoleccion' dentro de la base de datos db.  
+* **.insertOne({ name: 'John Doe', age: 30 }):** Llama al método insertOne para insertar un nuevo documento. El documento es un objeto JavaScript con dos campos: `name` con el valor `John Doe` y `age` con el valor `30`.  
+* **await:** Indica que esta es una operación asíncrona y el código esperará a que se complete antes de continuar. Esto requiere que la función contenedora sea async.  
+* **const result \=...:** Almacena el resultado de la operación de inserción en la variable result. Este resultado contendrá información sobre la operación, como el ID del documento insertado.  
+* **console.log(...):** Imprime en la consola un mensaje indicando que se ha creado un nuevo documento y muestra su ID único (`_id`), que se encuentra en `result.insertedId`.
 
-El método insertMany, por otro lado, permite la inserción de varios documentos a la vez. Su sintaxis es collection.insertMany(documents, options, callback).23 El parámetro documents es un array de objetos JavaScript que se van a insertar. Por ejemplo:
+El método **insertMany**, por otro lado, permite la inserción de varios documentos a la vez. Su sintaxis es `collection.insertMany(documents, options, callback)`. El parámetro `documents` es un array de objetos JavaScript que se van a insertar. Por ejemplo:
 
-JavaScript
-
-const result \= await db.collection('micoleccion').insertMany(\[{ name: 'Jane Doe', age: 25 }, { name: 'Peter Pan', age: 100 }\]);  
-console.log(\`${result.insertedCount} nuevos listados creados con los siguientes id(s):\`);  
+```javascript
+const result = await db.collection('micoleccion').insertMany([{ name: 'Jane Doe', age: 25 }, { name: 'Peter Pan', age: 100 }]);  
+console.log(`${result.insertedCount} nuevos listados creados con los siguientes id(s):`);  
 console.log(result.insertedIds);
+```
 
-Este ejemplo ilustra la inserción de múltiples documentos en la colección micoleccion.
+Este ejemplo ilustra la inserción de múltiples documentos en la colección `micoleccion`.
 
-* db.collection('micoleccion'): Selecciona la colección 'micoleccion'.  
-* .insertMany(...): Llama al método insertMany, que toma un array de documentos como argumento.  
-* \[{ name: 'Jane Doe', age: 25 }, { name: 'Peter Pan', age: 100 }\]: Este es el array de documentos que se van a insertar. Cada elemento del array es un objeto JavaScript que representa un documento con los campos name y age.  
-* await const result \=...: Espera la finalización de la operación asíncrona y almacena el resultado en result.  
-* console.log(...): Imprime en la consola un mensaje que indica cuántos documentos se insertaron (result.insertedCount) y muestra los IDs únicos (\_id) de los documentos insertados, que se encuentran en el objeto result.insertedIds.
+* **db.collection('micoleccion'):** Selecciona la colección `micoleccion`.
+* **.insertMany(...):** Llama al método `insertMany`, que toma un array de documentos como argumento.  
+* **[{ name: 'Jane Doe', age: 25 }, { name: 'Peter Pan', age: 100 }]:** Este es el array de documentos que se van a insertar. Cada elemento del array es un objeto JavaScript que representa un documento con los campos `name` y `age`.  
+* **await const result \=...:** Espera la finalización de la operación asíncrona y almacena el resultado en `result`.  
+* **console.log(...):** Imprime en la consola un mensaje que indica cuántos documentos se insertaron (`result.insertedCount`) y muestra los IDs únicos (`_id`) de los documentos insertados, que se encuentran en el objeto `result.insertedIds`.
 
-Ambos métodos, insertOne e insertMany, también pueden aceptar un objeto options opcional para especificar el nivel de confirmación de escritura y otras configuraciones.24
+Ambos métodos, `insertOne` e `insertMany`, también pueden aceptar un objeto options opcional para especificar el nivel de confirmación de escritura y otras configuraciones.
 
-**Operaciones de Lectura:** La recuperación de datos de una colección de MongoDB se realiza principalmente mediante los métodos find y findOne. El método findOne se utiliza para recuperar un solo documento que coincida con una consulta especificada. Su sintaxis es collection.findOne(query, options, callback).19 El parámetro query es un objeto JavaScript que define los criterios para seleccionar el documento. Por ejemplo:
+**4.2 Operaciones de Lectura:** La recuperación de datos de una colección de MongoDB se realiza principalmente mediante los métodos find y findOne. El método findOne se utiliza para recuperar un solo documento que coincida con una consulta especificada. Su sintaxis es collection.findOne(query, options, callback).19 El parámetro query es un objeto JavaScript que define los criterios para seleccionar el documento. Por ejemplo:
 
 JavaScript
 
