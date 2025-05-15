@@ -1,5 +1,4 @@
 # Sección 1: MONGODB OVERVIEW AND THE DOCUMENT MODEL
-
 ---
 
 **Identificar el conjunto de tipos de valores que admite BSON de MongoDB**
@@ -21,10 +20,9 @@
 
 
 # Sección 2 : CRUD
-
 ---
 
-**1\. Operaciones de Creación (Create)**
+## **1\. Operaciones de Creación (Create)**
 
 La operación de "Crear" en MongoDB se refiere al proceso de añadir nuevos documentos a una colección. Una característica importante de MongoDB es que, si la colección especificada no existe, se creará automáticamente al realizar la primera operación de inserción. Esta flexibilidad inherente al modelo sin esquema simplifica la interacción inicial con la base de datos.
 
@@ -55,7 +53,7 @@ La operación de "Crear" en MongoDB se refiere al proceso de añadir nuevos docu
   db.createCollection("nuevaColeccion")
   ```
 
-**2\. Operaciones de Lectura (Read)**
+## **2\. Operaciones de Lectura (Read)**
 
 La operación de "Leer" se centra en la recuperación de documentos existentes de una colección en MongoDB.
 
@@ -124,7 +122,7 @@ La operación de "Leer" se centra en la recuperación de documentos existentes d
   
   Su eficiencia radica en que detiene la búsqueda una vez que encuentra el primer documento que satisface la consulta.
 
-**3\. Operaciones de Actualización (Update)**
+## **3\. Operaciones de Actualización (Update)**
 
 La operación de "Actualizar" se refiere a la modificación de documentos ya existentes dentro de una colección de MongoDB. Estas operaciones siempre se dirigen a una única colección y mantienen la atomicidad a nivel de documento individual.
 
@@ -223,7 +221,24 @@ La operación de "Actualizar" se refiere a la modificación de documentos ya exi
   
   A diferencia de updateOne(), que modifica campos específicos, replaceOne() sobrescribe el documento existente por completo, por lo que es necesario incluir todos los campos deseados en el documento de reemplazo.
 
-**4\. Operaciones de Eliminación (Delete)**
+* **3.4 Metodos adicionales**
+  - **db.collection.findOneAndReplace()**
+    Este método busca un único documento que coincida con el filtro especificado y lo reemplaza por un nuevo documento. Devuelve el documento original antes de la actualización. Es útil cuando se necesita tanto el documento original como el nuevo.
+    ```javascript
+    db.collection.findOneAndReplace({ name: "Juan" }, { name: "Pedro", age: 30 })
+    ```
+  - **db.collection.findOneAndUpdate()**
+    Este método busca un único documento que coincida con el filtro especificado y lo actualiza según los cambios proporcionados. Devuelve el documento original antes de la actualización. Es útil para obtener el documento original y realizar cambios en él.
+    ```javascript
+    db.collection.findOneAndUpdate({ name: "Juan" }, { $set: { age: 30 } })
+    ```
+  - **db.collection.findAndModify()**
+    Este método es una versión más antigua de findOneAndUpdate() y findOneAndReplace(). Aunque todavía se encuentra en la documentación, se recomienda utilizar los métodos más nuevos para mayor claridad y consistencia.
+    ```javascript
+    db.collection.findAndModify({ query: { name: "Juan" }, update: { $set: { age: 30 } } })
+    ```
+
+## **4\. Operaciones de Eliminación (Delete)**
 
 La operación de "Eliminar" se encarga de remover documentos de una colección en MongoDB. Al igual que las otras operaciones de escritura, las eliminaciones se dirigen a una única colección y son atómicas a nivel de documento.
 
@@ -243,7 +258,14 @@ La operación de "Eliminar" se encarga de remover documentos de una colección e
   
   Es fundamental tener precaución al usar deleteMany() y asegurarse de que el filtro sea lo suficientemente específico para evitar la eliminación accidental de datos importantes.
 
-**5\. Operaciones de Escritura Masiva (Bulk Write Operations)**
+* **4.3 Metodos adicionales**
+  - **db.collection.findOneAndDelete()**
+    Este método busca un único documento que coincida con el filtro especificado y lo elimina. Devuelve el documento original antes de la eliminación. Es útil cuando se necesita tanto el documento original como la confirmación de su eliminación.
+    ```javascript
+    db.collection.findOneAndDelete({ name: "Juan" })
+    ```
+
+## **5\. Operaciones de Escritura Masiva (Bulk Write Operations)**
 
 El método **db.collection.bulkWrite()** permite realizar múltiples operaciones de inserción, actualización o eliminación en una única solicitud al servidor. Esta funcionalidad, también mencionada como "Bulk Write" en la documentación, ofrece una mejora significativa en el rendimiento para grandes volúmenes de operaciones al reducir el número de viajes de red a la base de datos. Un ejemplo de sintaxis básica podría ser: 
 
@@ -256,7 +278,7 @@ db.collection.bulkWrite([
 ```
 Este método permite combinar diferentes tipos de operaciones en una sola llamada, lo que no solo mejora la eficiencia, sino que también garantiza la atomicidad de cada operación individual dentro del contexto de la escritura masiva. Esto significa que si una operación falla, las demás aún se ejecutarán, lo que proporciona un mayor control sobre el manejo de errores y la consistencia de los datos.
 
-**6\. Tabla Resumen de Métodos CRUD**
+## **6\. Tabla Resumen de Métodos CRUD**
 
 | Operación | Método | Descripción |
 | :---- | :---- | :---- |
@@ -272,10 +294,73 @@ Este método permite combinar diferentes tipos de operaciones en una sola llamad
 | Eliminar | deleteMany() | Elimina todos los documentos que coinciden con una consulta. |
 | Escritura Masiva | bulkWrite() | Realiza múltiples operaciones de escritura en una solicitud. |
 
+# Sección 3: INDEXES
+---
+
+## **1\. Por qué usar índices en MongoDB**
+Los índices en MongoDB son estructuras de datos que mejoran la velocidad de las operaciones de consulta al permitir un acceso más rápido a los documentos dentro de una colección. Sin índices, MongoDB tendría que realizar un escaneo completo de la colección para encontrar los documentos que coinciden con una consulta, lo que puede ser ineficiente y lento, especialmente en colecciones grandes. Al crear índices en campos específicos, MongoDB puede localizar rápidamente los documentos relevantes sin necesidad de recorrer toda la colección.
+
+## **2\. Cómo funcionan los índices en MongoDB**
+Los índices aceleran las lecturas mientras ralentizan las escrituras. Internamente, un índice se implementa utilizando una estructura de datos basada en árboles B+ con una complejidad temporal de O(logN).
+
+La creación de nuevos índices en MongoDB puede afectar al rendimiento de escritura porque cada operación de escritura (inserción, actualización, eliminación) también debe actualizar los índices. El impacto exacto en la velocidad de escritura depende de varios factores, incluyendo el número de índices, la complejidad de los índices y la proporción de escrituras frente a lecturas de tu aplicación.
+
+## **3\. Tipos de índices en MongoDB**
+MongoDB ofrece varios tipos de índices, cada uno diseñado para satisfacer diferentes necesidades de consulta y rendimiento. Algunos de los tipos más comunes son:
+- **Índice de un solo campo(single field index)**: Este es el tipo más básico de índice, que se crea en un solo campo de un documento. Es útil para consultas simples que buscan documentos basados en un único campo.
+  ````javascript
+  db.collection.createIndex({ fieldName: 1 }) // Índice ascendente
+  db.collection.createIndex({ fieldName: -1 }) // Índice descendente
+  ````
+- **Índice compuesto(compound index)**: Este tipo de índice se crea en múltiples campos de un documento. Es útil para consultas que involucran varios campos y permite optimizar el rendimiento de esas consultas.
+  ````javascript
+  db.collection.createIndex({ field1: 1, field2: -1 }) // Índice compuesto en field1 (ascendente) y field2 (descendente)
+  ````
+  - **Regla ESR(Equality, Sort, Range)**: Cuando diseña un índice, es importante seguir la regla ESR. Esta regla establece que los índices deben ser diseñados para satisfacer las consultas de igualdad (E), ordenación (S) y rango (R) en ese orden. Esto significa que los índices deben ser creados para optimizar primero las consultas de igualdad, luego las de ordenación y finalmente las de rango.
+  Ejemplo:
+    ```javascript
+    db.collection.createIndex({ category: 1, price: -1, date: 1 }) // Índice que  sigue la regla ESR: Igualdad en category, ordenación por price y rango en date
+    ```
+  - **Consultas no soportadas por el índice**: Los índices compuestos no admiten consultas donde el orden de clasificación no coincide con la dirección del índice o la dirección inversa del índice. Supongamos que tenemos el siguiente indice compuesto:
+    ```javascript
+    db.collection.createIndex({ field1: 1, field2: -1 }) // Índice compuesto en field1 (ascendente) y field2 (descendente)
+    ```
+    En este caso, no se puede realizar una consulta que ordene por orden descendente en ambos campos, ya que el índice no admite esa dirección de ordenación. Por ejemplo:
+    ```javascript
+    db.collection.find().sort({ field1: -1, field2: -1 }) // No se puede utilizar el índice compuesto
+    ```
+    Lo que si se puede hacer es ordenar por el inverso del índice:
+    ```javascript
+    db.collection.find().sort({ field1: -1, field2: 1 }) // Se puede utilizar el índice compuesto
+    ```
+
+- **Índice multikey(multikey index)**: Este tipo de índice se utiliza para indexar campos que contienen arrays. MongoDB crea un índice separado para cada elemento del array, lo que permite realizar consultas eficientes en arrays.
+  ````javascript
+  db.collection.createIndex({ fieldName: 1 }) // Índice multikey en un campo que contiene un array. fieldName es un campo que contiene un array, por ejemplo, ["a", "b", "c"]
+  ````
+  El array puede contener elementos de diferentes tipos, como números, cadenas o documentos. MongoDB crea un índice separado para cada elemento del array, lo que permite realizar consultas eficientes en arrays. Ejemplo para array de documentos:
+  ```javascript
+  db.collection.createIndex({ "fieldName.subField": 1 }) // Índice multikey en un campo que contiene un array de documentos
+  ```
+
+- **Índice de texto(text index)**: Este tipo de índice se utiliza para realizar búsquedas de texto completo en campos de tipo cadena. Permite realizar consultas de texto, como búsqueda de palabras clave o frases en documentos.
+  ```javascript
+  db.collection.createIndex({ fieldName: "text" }) // Índice de texto en un campo
+  ```
+  - **Búsqueda de texto**: MongoDB permite realizar búsquedas de texto utilizando el operador $text. Esto permite buscar documentos que contengan una o más palabras clave en un campo indexado como texto.
+  ```javascript
+  db.collection.find({ $text: { $search: "palabra clave" } }) // Busca documentos que contengan "palabra clave"
+  ```
+  Se pueden especificar multiples campos para la búsqueda de texto, y MongoDB utilizará el índice de texto correspondiente para optimizar la consulta.
+  ```javascript
+  db.collection.createIndex({ field1: "text", field2: "text" }) // Índice de texto en múltiples campos
+  db.collection.find({ $text: { $search: "palabra clave" } }) // Busca documentos que contengan "palabra clave" en field1 o field2
+  ```
+
+
+
 
 # Sección 6: DRIVERS
-### **Una Guía Completa del Driver de MongoDB para Node.js**
-
 ---
 
 
