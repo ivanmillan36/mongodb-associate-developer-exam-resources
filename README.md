@@ -357,7 +357,148 @@ MongoDB ofrece varios tipos de índices, cada uno diseñado para satisfacer dife
   db.collection.find({ $text: { $search: "palabra clave" } }) // Busca documentos que contengan "palabra clave" en field1 o field2
   ```
 
+- **Bonus: Atlas Search**: Atlas Search es una búsqueda basada en relevancia, no una búsqueda de base de datos tradicional. MongoDB construyó esta solución de búsqueda sobre Apache Lucene. La búsqueda comienza con índices de búsqueda, que no son iguales a los índices de base de datos. Aquí hay una buena lectura sobre índices invertidos de búsqueda: https://www.cockroachlabs.com/blog/inverted-indexes/ que te da una buena intuición sobre cómo funciona la búsqueda.
 
+  - Componentes de un Índice de Atlas Search:
+    - **Analizador**: Determina cómo se procesa el texto durante la indexación y búsqueda
+      - Predeterminado: El analizador estándar divide el texto en términos según los límites de palabras
+      - Los analizadores específicos de idioma manejan la derivación, palabras vacías, etc.
+
+    - **Mapeos**: Definen cómo deben indexarse los campos del documento
+      - Mapeos de tipo (cadena, número, fecha, etc.)
+      - Los mapeos dinámicos detectan automáticamente los tipos de campo comunes
+      - Mapeos estáticos para control explícito sobre la indexación de campos
+    - **Campos Almacenados**: Campos que se guardan en el índice para su recuperación
+      - Sinónimos para manejar términos equivalentes
+      - Configuraciones de sensibilidad a mayúsculas y minúsculas
+      - Opciones de normalización para el procesamiento de texto
+  
+  - Creación de un índice de búsqueda:
+    Es ideal saber cómo crear un índice de búsqueda tanto en la interfaz de MongoDB Atlas como en mongosh
+
+    Para verificar si existe un nuevo índice de búsqueda para la colección de películas:
+    ```javascript
+    db.movies.getSearchIndexes()
+    ```
+    Para eliminar el índice predeterminado y crear otro mediante la línea de comandos:
+    ```javascript
+    db.movies.dropSearchIndex("default")
+    ```
+
+    Para crear un índice de búsqueda en la colección de películas:
+    ```Javascript
+      db.movies.createSearchIndex(
+      "movieTitleIdx",
+      "search",
+      {
+        mappings: {
+          dynamic: false, // no se permiten campos adicionales. Si se coloca en true se agregan todos los campos
+          fields: {
+            title: {
+              type: "string",
+            },
+            plot: {
+              type: "string",
+            },
+          },
+        },
+      })
+    ```
+  
+  - Consulta de búsqueda:
+    Atlas Search proporciona potentes capacidades de búsqueda de texto completo que van más allá de las consultas básicas. Después de crear un índice de búsqueda, puedes realizar operaciones sofisticadas usando el operador `$search` dentro de un pipeline de agregación.
+
+    La forma más simple de una consulta de búsqueda utiliza el operador `$search` con el operador `$text`:
+    ```javascript
+       db.movies.aggregate([
+        {
+          $search: {
+            index: "movieTitleIdx", // Reemplaza con el nombre de tu índice de búsqueda
+            text: {
+              query: "adventure",
+              path: "title", // El campo en el que buscar
+              fuzzy: {
+                maxEdits: 2, // Cuando quieres buscar una palabra similar a la palabra de consulta (por ejemplo, para errores ortográficos)
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            title: 1,
+            score: {
+              $meta: "searchScore",
+            }, // Podemos usar $meta para obtener la puntuación de relevancia para cada documento
+          },
+        },
+        },
+      ])
+    ```
+  - Uso de `$search` con operadores compuestos
+    Atlas Search también permite combinar múltiples operadores de búsqueda en una sola consulta utilizando el operador `$search` con operadores compuestos. Esto permite realizar búsquedas más complejas y específicas.
+
+    ```javascript
+      db.movies.aggregate([
+      {
+        $search: {
+          compound: {
+            must: [
+              {
+                text: {
+                  query: "adventure",
+                  path: "title"
+                }
+              }
+            ],
+              should: [
+              {
+                text: {
+                  query: "fantasy",
+                  path: "genres",
+                  score: { boost: 1.5 }
+                }
+              }
+            ],
+            mustNot: [
+              {
+                text: {
+                  query: "horror",
+                  path: "genres"
+                }
+              }
+            ],
+            filter: [
+              {
+                range: {
+                  path: "imdbRating",
+                  gte: 7.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          title: 1,
+          genres: 1,
+          imdbRating: 1,
+          year: 1,
+          score: { $meta: "searchScore" }
+        }
+      },
+      {
+        $sort: { score: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ])
+    ```
+
+    En este ejemplo, la consulta busca películas que contengan "adventure" en el título y "fantasy" en los géneros, pero excluye aquellas que contengan "horror". Además, filtra las películas con una calificación de IMDb mayor o igual a 7.0. La puntuación de relevancia se utiliza para ordenar los resultados.
+      
 
 
 # Sección 6: DRIVERS
