@@ -363,11 +363,39 @@ MongoDB ofrece varios tipos de índices, cada uno diseñado para satisfacer dife
     - **Analizador**: Determina cómo se procesa el texto durante la indexación y búsqueda
       - Predeterminado: El analizador estándar divide el texto en términos según los límites de palabras
       - Los analizadores específicos de idioma manejan la derivación, palabras vacías, etc.
-
-    - **Mapeos**: Definen cómo deben indexarse los campos del documento
+      - **Analizadores Built-in**: Atlas Search proporciona varios analizadores incorporados:
+        - **Standard**: Es el analizador predeterminado para todos los índices y consultas de Atlas Search.
+        - **Simple**: Divide el texto en términos de búsqueda donde encuentra un carácter que no sea una letra.
+        - **Whitespace**: Divide el texto en términos de búsqueda donde encuentra un carácter de espacio en blanco.
+        - **Keyword**: Indexa los campos de texto como términos únicos.
+        - **Language**: Proporciona un conjunto de analizadores de texto específicos para diferentes idiomas.
+      - **Tokenizers**: Un tokenizer en el analizador personalizado determina cómo Atlas Search divide el texto en fragmentos discretos para la indexación.
+        ```javascript
+        "tokenizer": {
+          "type": "<tokenizer-type>",
+          "<additional-option>": "<value>"
+        }
+        ```
+        Atlas Search soporta los siguientes tipos de tokenizers:
+        - **edgeGram**: Divide el texto en tokens de longitud variable desde el inicio del texto.
+        - **keyword**: Trata todo el campo como un solo token.
+        - **nGram**: Divide el texto en tokens de longitud específica.
+        - **regexCaptureGroup**: Usa expresiones regulares para capturar y tokenizar partes específicas del texto.
+        - **regexSplit**: Divide el texto usando un patrón de expresión regular como separador.
+        - **standard**: El tokenizer predeterminado que divide el texto en palabras.
+        - **uaxUrlEmail**: Similar al standard pero preserva URLs y direcciones de correo electrónico como tokens únicos.
+        - **whitespace**: Divide el texto donde encuentra espacios en blanco.
+    - **Mappings**: Definen cómo deben indexarse los campos del documento
       - Mapeos de tipo (cadena, número, fecha, etc.)
       - Los mapeos dinámicos detectan automáticamente los tipos de campo comunes
       - Mapeos estáticos para control explícito sobre la indexación de campos
+      - Los siguientes tipos de datos no son soportados por Atlas Search:
+        - Decimal128
+        - JavaScript code with scope
+        - Max key
+        - Min key
+        - Regular Expression
+        - Timestamp
     - **Campos Almacenados**: Campos que se guardan en el índice para su recuperación
       - Sinónimos para manejar términos equivalentes
       - Configuraciones de sensibilidad a mayúsculas y minúsculas
