@@ -27,7 +27,7 @@
 La operación de "Crear" en MongoDB se refiere al proceso de añadir nuevos documentos a una colección. Una característica importante de MongoDB es que, si la colección especificada no existe, se creará automáticamente al realizar la primera operación de inserción. Esta flexibilidad inherente al modelo sin esquema simplifica la interacción inicial con la base de datos.
 
 * **1.1. db.collection.insertOne()**
-  Este método se utiliza para insertar un único documento en una colección específica. Se debe proporcionar el documento a insertar como argumento del método. La introducción de este método en la versión 3.2 7 significó una especialización en las operaciones de inserción, ofreciendo un método dedicado para la inserción de un solo documento. Un ejemplo de sintaxis básica sería:
+  Este método se utiliza para insertar un único documento en una colección específica. Se debe proporcionar el documento a insertar como argumento del método. La introducción de este método en la versión 3.2 significó una especialización en las operaciones de inserción, ofreciendo un método dedicado para la inserción de un solo documento. Un ejemplo de sintaxis básica sería:
 
   ```javascript
    db.collection.insertOne({ name: "Ejemplo" })
@@ -172,7 +172,7 @@ La operación de "Actualizar" se refiere a la modificación de documentos ya exi
         ```javascript
         db.collection.updateOne({ name: "Juan" }, { $pull: { hobbies: "fútbol" } })
         ```
-      - **$pullAll:** Elimina todos los elementos que coincidan con un valor específico en un array.
+      - **$pullAll:** Elimina todos los elementos que coincidan con un array de valores específicos. Similar a **\$pull**, pero permite eliminar múltiples valores a la vez.
         ```javascript
         db.collection.updateOne({ name: "Juan" }, { $pullAll: { hobbies: ["fútbol", "baloncesto"] } })
         ```
@@ -185,7 +185,7 @@ La operación de "Actualizar" se refiere a la modificación de documentos ya exi
         ```javascript
         db.collection.updateOne({ name: "Juan" }, { $push: { hobbies: { $each: ["fútbol"], $position: 0 } } })
         ```
-      - **$slice:** Limita el número de elementos devueltos en un array.
+      - **$slice:** Acorta un array a un número específico de elementos. Este operador se utiliza para limitar la cantidad de elementos en un array.
         ```javascript
         db.collection.updateOne({ name: "Juan" }, { $slice: { hobbies: -2 } })
         ```
@@ -216,7 +216,7 @@ La operación de "Actualizar" se refiere a la modificación de documentos ya exi
   Este método reemplaza completamente un único documento que coincida con el filtro especificado con un nuevo documento. Si varios documentos cumplen con el filtro, solo se reemplazará el primero. Su introducción también se produjo en la versión 3.2.7. Un ejemplo de sintaxis básica es:
   
   ```javascript
-  db.collection.replaceOne({ \_id: ObjectId("someId") }, { newField: "newValue" })
+  db.collection.replaceOne({ _id: ObjectId("someId") }, { newField: "newValue" })
   ```
   
   A diferencia de updateOne(), que modifica campos específicos, replaceOne() sobrescribe el documento existente por completo, por lo que es necesario incluir todos los campos deseados en el documento de reemplazo.
