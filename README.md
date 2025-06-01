@@ -233,7 +233,7 @@ La operación de "Actualizar" se refiere a la modificación de documentos ya exi
     db.collection.findOneAndUpdate({ name: "Juan" }, { $set: { age: 30 } })
     ```
   - **db.collection.findAndModify()**
-    Este método es una versión más antigua de findOneAndUpdate() y findOneAndReplace(). Aunque todavía se encuentra en la documentación, se recomienda utilizar los métodos más nuevos para mayor claridad y consistencia.
+    Este método es una versión más antigua de findOneAndUpdate() y findOneAndReplace() y se encuentra depreacado en las versiones más recientes de MongoDB. Sin embargo, aún se utiliza en algunas aplicaciones heredadas. Permite buscar un documento y modificarlo en una sola operación atómica. La sintaxis básica es similar a findOneAndUpdate():
     ```javascript
     db.collection.findAndModify({ query: { name: "Juan" }, update: { $set: { age: 30 } } })
     ```
@@ -528,6 +528,157 @@ MongoDB ofrece varios tipos de índices, cada uno diseñado para satisfacer dife
     En este ejemplo, la consulta busca películas que contengan "adventure" en el título y "fantasy" en los géneros, pero excluye aquellas que contengan "horror". Además, filtra las películas con una calificación de IMDb mayor o igual a 7.0. La puntuación de relevancia se utiliza para ordenar los resultados.
       
 
+# Sección 4: DATA MODELING
+---
+
+## **1\. Relaciones en MongoDB**
+En MongoDB, las relaciones entre documentos pueden ser modeladas de dos maneras principales: **embebiendo** (embedding) y **referenciando** (referencing). La elección entre estas dos estrategias depende de varios factores, incluyendo la naturaleza de los datos, la frecuencia de acceso y actualización, y los patrones de consulta.
+
+### **1.1. Tipos de relaciones**
+- **Uno a Uno (1:1)**: En una relación uno a uno, un documento en una colección está relacionado con un único documento en otra colección. Esta relación se puede modelar embebiendo el documento relacionado dentro del documento principal o referenciando el ID del documento relacionado.
+  - **Embebido**: El documento relacionado se incluye directamente dentro del documento principal.
+    ```javascript
+    {
+      _id: ObjectId("..."),
+      name: "John Doe",
+      profile: {
+        age: 30,
+        address: "123 Main St"
+      }
+    }
+    ```
+  - **Referenciado**: El documento principal contiene una referencia al ID del documento relacionado.
+    ```javascript
+    {
+      _id: ObjectId("..."),
+      name: "John Doe",
+      profileId: ObjectId("...")
+    }
+    ```
+- **Uno a Muchos (1:N)**: En una relación uno a muchos, un documento en una colección puede estar relacionado con múltiples documentos en otra colección. Esta relación se puede modelar embebiendo los documentos relacionados dentro del documento principal o referenciando los IDs de los documentos relacionados.
+  - **Embebido**: Los documentos relacionados se incluyen directamente dentro del documento principal como un array.
+    ```javascript
+    {
+      _id: ObjectId("..."),
+      name: "John Doe",
+      orders: [
+        { orderId: ObjectId("..."), total: 100 },
+        { orderId: ObjectId("..."), total: 200 }
+      ]
+    }
+    ```
+  - **Referenciado**: El documento principal contiene un array de referencias a los IDs de los documentos relacionados.
+    ```javascript
+    {
+      _id: ObjectId("..."),
+      name: "John Doe",
+      orderIds: [ObjectId("..."), ObjectId("...")]
+    }
+    ```
+- **Muchos a Muchos (N:M)**: En una relación muchos a muchos, múltiples documentos en una colección pueden estar relacionados con múltiples documentos en otra colección. Esta relación generalmente se modela utilizando una colección intermedia que contiene referencias a los IDs de ambos documentos.
+  - **Embebido**: No es común embeber relaciones muchos a muchos debido a la complejidad y al tamaño potencial de los datos.
+  - **Referenciado**: Se utiliza una colección intermedia para almacenar las referencias.
+    ```javascript
+    // Colección de usuarios
+    {
+      _id: ObjectId("..."),
+      name: "John Doe"
+    }
+    
+    // Colección de grupos
+    {
+      _id: ObjectId("..."),
+      name: "Admins"
+    }
+    
+    // Colección intermedia de membresías
+    {
+      userId: ObjectId("..."),
+      groupId: ObjectId("...")
+    }
+    ```
+### **1.2. Embebido vs Referenciado**
+La decisión entre embeber o referenciar documentos en MongoDB depende de varios factores, incluyendo la naturaleza de los datos, la frecuencia de acceso y actualización, y los patrones de consulta. Aquí hay algunas consideraciones clave:
+- **Embebido**:
+  - **Ventajas**:
+    - Mejora el rendimiento de lectura al reducir la necesidad de realizar múltiples consultas.
+    - Simplifica la estructura de datos al mantener los datos relacionados juntos.
+    - Ideal para datos que son frecuentemente accedidos juntos y no cambian con frecuencia.
+  - **Desventajas**:
+    - Puede llevar a documentos grandes y difíciles de manejar si los datos embebidos crecen demasiado.
+    - Dificulta las actualizaciones de los datos embebidos, ya que se debe actualizar todo el documento principal.
+- **Referenciado**:
+  - **Ventajas**:
+    - Permite una mayor flexibilidad y escalabilidad al separar los datos relacionados.
+    - Facilita las actualizaciones de los documentos relacionados sin afectar al documento principal.
+    - Ideal para datos que cambian con frecuencia o que tienen una relación compleja.
+  - **Desventajas**:
+    - Requiere múltiples consultas para recuperar datos relacionados, lo que puede afectar el rendimiento de lectura.
+    - Puede complicar la lógica de la aplicación al manejar referencias entre documentos.
+
+### **1.1. Antipatrones de modelado de datos**
+Los antipatrones de modelado de datos son prácticas que pueden llevar a problemas de rendimiento, escalabilidad o mantenibilidad en una base de datos. En MongoDB, algunos antipatrones comunes incluyen:
+- **Arrays masivos (arrays ilimitados)**: Utilizar arrays que pueden crecer indefinidamente dentro de un documento puede llevar a problemas de rendimiento y límites de tamaño de documentos. Es mejor limitar el tamaño de los arrays o utilizar referencias para manejar grandes colecciones de datos relacionados.
+  ```javascript
+  // Antipatrón: Array masivo
+  {
+    _id: ObjectId("..."),
+    name: "John Doe",
+    comments: [ /* miles de comentarios */ ]
+  }
+  ```
+- **Numero excesivo de colecciones**: Crear demasiadas colecciones para datos que podrían ser modelados en una sola colección puede complicar la estructura de la base de datos y afectar el rendimiento. Es mejor agrupar datos relacionados en una sola colección siempre que sea posible.
+  ```javascript
+  // Antipatrón: Demasiadas colecciones
+  db.users
+  db.userProfiles
+  db.userSettings
+  ```
+- **Indices innecesarios**: Crear índices en campos que no son utilizados en consultas puede afectar negativamente el rendimiento de escritura y aumentar el uso de espacio en disco. Es importante analizar las consultas y crear índices solo en los campos que realmente se utilizan.
+  ```javascript
+  // Antipatrón: Índice innecesario
+  db.collection.createIndex({ unusedField: 1 }) // Este índice no se utiliza en ninguna consulta
+  ```
+- **Documentos inflados**: Tener documentos que contienen demasiada información o datos que no son necesarios para la mayoría de las consultas puede llevar a un uso ineficiente del espacio en disco y afectar el rendimiento. Es mejor dividir los documentos en partes más pequeñas y utilizar referencias cuando sea necesario.
+  ```javascript
+  // Antipatrón: Documento inflado
+  {
+    _id: ObjectId("..."),
+    name: "John Doe",
+    profile: { /* muchos campos innecesarios */ },
+    orders: [ /* muchos pedidos */ ]
+  }
+  ```
+- **Separar datos que son frecuentemente accedidos juntos**: Almacenar datos que son frecuentemente accedidos juntos en colecciones separadas puede llevar a un rendimiento deficiente debido a la necesidad de realizar múltiples consultas. Es mejor agrupar estos datos en un solo documento o utilizar embebido para mejorar el rendimiento de lectura.
+  ```javascript
+  // Antipatrón: Datos separados que son frecuentemente accedidos juntos
+  // Colección de usuarios
+  {
+    _id: ObjectId("..."),
+    name: "Juan Pérez",
+    email: "juan@email.com"
+  }
+
+  // Colección separada de perfiles (información que siempre se necesita con el usuario)
+  {
+    userId: ObjectId("..."),
+    address: "Calle Principal 123",
+    phone: "+34 600 123 456",
+    birthDate: "1990-05-15"
+  }
+
+  // Mejor práctica: Embeber datos frecuentemente accedidos
+  {
+    _id: ObjectId("..."),
+    name: "Juan Pérez",
+    email: "juan@email.com",
+    profile: {
+      address: "Calle Principal 123",
+      phone: "+34 600 123 456",
+      birthDate: "1990-05-15"
+    }
+  }
+  ```
 
 # Sección 6: DRIVERS
 ---
